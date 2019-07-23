@@ -1,0 +1,133 @@
+package cryptographyapp;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.util.Scanner;
+
+public class PohlligHellman
+{
+
+    public static void main(String[] args)
+    {
+
+        PolligHellman algorithm = new PolligHellman();
+        BigInteger C = algorithm.encrypt();
+        String MDecrypted = algorithm.decrypt(C);
+        System.out.println("M Decrypted: " + MDecrypted);
+    }
+
+    public void keyGenerate()
+    {
+        int BIT_LENGTH = 512;
+        SecureRandom pRand = new SecureRandom();
+        SecureRandom mRand = new SecureRandom();
+        SecureRandom eRand = new SecureRandom();
+
+        BigInteger p = BigInteger.probablePrime(BIT_LENGTH, pRand);
+
+        BigInteger M;
+        do
+        {
+            M = BigInteger.probablePrime(BIT_LENGTH, mRand);
+        } while (M.compareTo(p) >= 0);
+
+        BigInteger e;
+        do
+        {
+            e = BigInteger.probablePrime(BIT_LENGTH, eRand);
+        } while (e.compareTo(p) >= 0 && (e.gcd(p.subtract(BigInteger.ONE))).compareTo(BigInteger.ONE) != 0);
+
+        BigInteger d = e.modInverse(p.subtract(BigInteger.ONE));
+
+        try (PrintWriter pubKeyStorage = new PrintWriter("./PolligHellPublicKey.txt"))
+        {
+            pubKeyStorage.println(e + " " + p);
+            pubKeyStorage.flush();
+            pubKeyStorage.close();
+        } catch (FileNotFoundException err)
+        {
+            System.out.println(err);
+        }
+
+        try (PrintWriter privKeyStorage = new PrintWriter("./PolligHellPrivateKey.txt"))
+        {
+            privKeyStorage.println(d + " " + p);
+            privKeyStorage.flush();
+            privKeyStorage.close();
+        } catch (FileNotFoundException err)
+        {
+            System.out.println(err);
+        }
+    }
+
+    public BigInteger encrypt()
+    {
+        // GET KEY IN
+        File key = new File("./PolligHellPublicKey.txt");
+        Scanner in;
+        BigInteger e = BigInteger.ZERO;
+        BigInteger p = BigInteger.ZERO;
+        try
+        {
+            in = new Scanner(key);
+            e = in.nextBigInteger();
+            p = in.nextBigInteger();
+        } catch (FileNotFoundException err)
+        {
+            System.out.println(err);
+        }
+        // END GET KEY IN 
+
+        
+        
+        System.out.print("Message: ");
+        Scanner keyboardIn = new Scanner(System.in);
+        String message = keyboardIn.nextLine();
+        
+        while (message.length() < 1 || message.length() > (512 / 4) - 1)
+        {
+            System.out.println("Message must be greater than 0 and less than " + ((512 / 4) - 1) + " characters");
+            System.out.print("Message: ");
+            message = keyboardIn.nextLine();
+        }
+        
+        
+        // Convert plain characters to bytes.
+        BigInteger M = new BigInteger(message.getBytes());
+        System.out.println("M: " + M);
+        
+        // Encrypt
+        BigInteger C = M.modPow(e, p);
+        System.out.println("C: "+ C);
+        return C;
+    }
+
+    public String decrypt(BigInteger C)
+    {
+        // GET KEY IN
+        File key = new File("./PolligHellPrivateKey.txt");
+        Scanner in;
+        BigInteger d = BigInteger.ZERO;
+        BigInteger p = BigInteger.ZERO;
+        try
+        {
+            in = new Scanner(key);
+            d = in.nextBigInteger();
+            p = in.nextBigInteger();
+        } catch (FileNotFoundException err)
+        {
+            System.out.println(err);
+        }
+        
+        // END GET KEY IN
+
+        
+        // Decrypt
+        BigInteger M = C.modPow(d, p);
+        // Decrypt message to plain characters.
+        return new String(M.toByteArray());
+    }
+}
